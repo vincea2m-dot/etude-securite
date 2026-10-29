@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d3b66">
+<title>Études de sécurité</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <button id="btnBack" class="icon-btn" aria-label="Retour" hidden>
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <div id="title">Études de sécurité</div>
+  <button id="btnSettings" class="icon-btn" aria-label="Réglages">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+  </button>
+</header>
+
+<nav id="tabs" hidden>
+  <button data-tab="ident" class="active">Appareil</button>
+  <button data-tab="check">Contrôles</button>
+  <button data-tab="sign">Signature</button>
+</nav>
+
+<main id="view"></main>
+
+<footer id="bottombar" hidden>
+  <div class="progress-row">
+    <div id="progress"><div id="progressFill"></div></div>
+    <div id="progressText"></div>
+  </div>
+  <button id="btnPdf" class="btn primary">Générer le PDF</button>
+</footer>
+
+<input type="file" id="fileInput" accept="image/*" hidden>
+
+<div id="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"></div>
+    <div id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<div id="toast" hidden></div>
+<div id="busy" hidden><div class="spinner"></div><div>Génération du PDF…</div></div>
+
+<script src="jspdf.umd.min.js"></script>
+<script src="checklist.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

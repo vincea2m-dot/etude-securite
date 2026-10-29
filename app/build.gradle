@@ -1,0 +1,46 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "fr.asco.etudesecurite"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "fr.asco.etudesecurite"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    // Clé de signature fixe : permet d'installer les mises à jour sans désinstaller l'appli (et sans perdre les études).
+    signingConfigs {
+        etude {
+            storeFile file("signature.jks")
+            storePassword "etudesecu"
+            keyAlias "etude"
+            keyPassword "etudesecu"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.etude
+        }
+        debug {
+            signingConfig signingConfigs.etude
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core:1.13.1"
+    implementation "androidx.webkit:webkit:1.11.0"
+}
