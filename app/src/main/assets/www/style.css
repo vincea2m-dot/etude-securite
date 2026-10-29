@@ -88,16 +88,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--bleu2); bor
   display: grid; place-items: center; }
 .chk .box svg { width: 16px; height: 16px; stroke: #fff; stroke-width: 3.2; fill: none; display: none; }
 .chk.on .box svg { display: block; }
-.chk.on.C { border-color: var(--vert); color: var(--vert); font-weight: 600; }
-.chk.on.C .box { background: var(--vert); border-color: var(--vert); }
-.chk.on.NC { border-color: var(--rouge); color: var(--rouge); font-weight: 600; }
-.chk.on.NC .box { background: var(--rouge); border-color: var(--rouge); }
-.chk.on.SO { border-color: var(--so); color: var(--so); font-weight: 600; }
-.chk.on.SO .box { background: var(--so); border-color: var(--so); }
+.chk { --c: #0d3b66; }
+.chk.on { border-color: var(--c); color: var(--c); font-weight: 600; }
+.chk.on .box { background: var(--c); border-color: var(--c); }
+.checks.six .chk { font-size: 13px; padding: 9px 6px; gap: 6px; }
+.checks.six .box { width: 18px; height: 18px; }
+.btn.mini { margin-top: 10px; padding: 8px 12px; font-size: 13px; background: #e8eef6; color: var(--bleu); }
+.point .ref { color: var(--gris); text-transform: uppercase; letter-spacing: .03em; }
 .point textarea { margin-top: 10px; min-height: 56px; }
-.point.NC { border-left: 4px solid var(--rouge); }
-.point.C { border-left: 4px solid var(--vert); }
-.point.SO { border-left: 4px solid var(--so); }
 .tout { display: flex; gap: 8px; margin-bottom: 4px; }
 .tout .btn { flex: 1; padding: 10px; font-size: 14px; }
 

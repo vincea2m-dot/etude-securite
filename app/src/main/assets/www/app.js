@@ -2,7 +2,7 @@
   "use strict";
 
   // ---------- Stockage ----------
-  const K_ETUDES = "etudes_v1", K_REGL = "reglages_v1";
+  const K_ETUDES = "eds_v1", K_REGL = "reglages_v1";
   function lire(k, def) {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; }
   }
@@ -54,19 +54,24 @@
     CHECKLIST.forEach(g => g.items.forEach(it => { if (!it.t || !type || it.t === type) res.push(it); }));
     return res;
   }
+  function optsDe(it) { return OPTS[it.o]; }
+  function optDe(it, v) { return optsDe(it).find(o => o.v === v); }
   function stats(e) {
     const vis = pointsVisibles(e);
-    let fait = 0, nc = 0;
-    vis.forEach(it => { const p = e.points[it.id]; if (p && p.e) { fait++; if (p.e === "NC") nc++; } });
-    return { total: vis.length, fait, nc };
+    let fait = 0, nc = 0, risques = 0;
+    vis.forEach(it => {
+      const p = e.points[it.id];
+      if (p && p.e) { fait++; const o = optDe(it, p.e); if (o && o.alerte) { nc++; if (it.o === "risque") risques++; } }
+    });
+    return { total: vis.length, fait, nc, risques };
   }
   function nouvelleEtude() {
     const d = new Date();
-    const num = "ES-" + auj().replace(/-/g, "") + "-" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0");
+    const num = "EDS-" + auj().replace(/-/g, "") + "-" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0");
     return {
       id: String(Date.now()), num, cree: Date.now(), maj: Date.now(),
-      ident: { adresse: "", ville: "", client: "", numApp: "", marque: "", type: "", annee: "", erp: "",
-               niveaux: "", charge: "", date: auj(), technicien: reglages.technicien || "" },
+      ident: { adresse: "", ville: "", client: "", numApp: "", marque: "", type: "", machinerie: "", annee: "",
+               niveaux: "", charge: "", vitesse: "", manoeuvre: "", acces: "", date: auj(), technicien: reglages.technicien || "" },
       points: {}, conclusion: "", signature: { nom: reglages.technicien || "", img: "" }
     };
   }
@@ -102,26 +107,26 @@
 
   // ---------- Écran : liste ----------
   function vueListe() {
-    setTitre("Études de sécurité");
+    setTitre("Études de sécurité (EDS)");
     const v = $("#view");
     const tri = etudes.slice().sort((a, b) => b.maj - a.maj);
     let h = "";
     if (!tri.length) {
       h = '<div class="empty"><p style="font-size:17px;font-weight:600;color:#1c2430">Aucune étude pour le moment</p>' +
-          "<p>Appuyez sur « Nouvelle étude » pour commencer.</p></div>";
+          "<p>Appuyez sur « Nouvelle EDS » pour commencer.</p></div>";
     }
     tri.forEach(e => {
       const s = stats(e);
       let badge;
       if (s.fait < s.total) badge = '<span class="badge wip">' + s.fait + "/" + s.total + "</span>";
-      else if (s.nc) badge = '<span class="badge ko">' + s.nc + " NC</span>";
-      else badge = '<span class="badge ok">Conforme</span>';
+      else if (s.risques) badge = '<span class="badge ko">' + s.risques + " risque" + (s.risques > 1 ? "s" : "") + "</span>";
+      else badge = '<span class="badge ok">Terminée</span>';
       h += '<div class="card etude" data-id="' + e.id + '"><div class="info">' +
            '<div class="adr">' + esc(e.ident.adresse || "Adresse non renseignée") + "</div>" +
            '<div class="meta">' + esc([e.ident.ville, e.ident.numApp ? "App. " + e.ident.numApp : "", frDate(e.ident.date)].filter(Boolean).join(" · ")) + "</div>" +
            "</div>" + badge + "</div>";
     });
-    h += '<div style="height:70px"></div><button class="fab" id="btnNew">+ Nouvelle étude</button>';
+    h += '<div style="height:70px"></div><button class="fab" id="btnNew">+ Nouvelle EDS</button>';
     v.innerHTML = h;
     $("#btnNew").onclick = () => {
       courante = nouvelleEtude(); etudes.push(courante); sauverEtudes();
@@ -144,7 +149,7 @@
       '<div class="tout"><button class="btn primary" id="rLogo">Choisir un logo</button>' +
       (reglages.logo ? '<button class="btn danger" id="rLogoDel">Retirer</button>' : "") + "</div>" +
       '<p class="hint">Image PNG ou JPG depuis la galerie ou les fichiers du téléphone.</p></div>' +
-      '<p class="hint" style="text-align:center">Études de sécurité ascenseurs · v1.0</p>';
+      '<p class="hint" style="text-align:center">EDS ascenseurs · v2.0</p>';
     $("#rSoc").oninput = e => { reglages.societe = e.target.value; sauverReglages(); };
     $("#rTech").oninput = e => { reglages.technicien = e.target.value; sauverReglages(); };
     $("#rLogo").onclick = choisirLogo;
@@ -199,19 +204,22 @@
       champ("iAdr", "Adresse", i.adresse) + champ("iVille", "Code postal / ville", i.ville) +
       champ("iClient", "Client / syndic", i.client) +
       '<div class="row2">' + champ("iNum", "N° d'appareil", i.numApp) + champ("iDate", "Date de l'étude", i.date, "date") + "</div></div>" +
-      '<div class="card"><h2>Appareil</h2>' +
-      '<label class="field"><span>Type</span>' + segment("iType", [["elec", "Électrique"], ["hyd", "Hydraulique"]], i.type) + "</label>" +
+      '<div class="card"><h2>Description de l\'appareil</h2>' +
+      '<label class="field"><span>Type d\'entraînement</span>' + segment("iType", [["elec", "Électrique"], ["hyd", "Hydraulique"]], i.type) + "</label>" +
+      '<label class="field"><span>Emplacement de la machinerie</span>' + segment("iMach", [["haute", "Haute"], ["basse", "Basse"], ["laterale", "Latérale"], ["mrl", "Sans local"]], i.machinerie) + "</label>" +
       '<div class="row2">' + champ("iMarque", "Marque", i.marque) + champ("iAnnee", "Année de mise en service", i.annee, "text", ' inputmode="numeric"') + "</div>" +
       '<div class="row2">' + champ("iNiv", "Nombre de niveaux", i.niveaux, "text", ' inputmode="numeric"') + champ("iCharge", "Charge (kg)", i.charge, "text", ' inputmode="numeric"') + "</div>" +
-      '<label class="field"><span>Établissement recevant du public (ERP)</span>' + segment("iErp", [["oui", "Oui"], ["non", "Non"]], i.erp) + "</label></div>" +
+      '<div class="row2">' + champ("iVit", "Vitesse (m/s)", i.vitesse, "text", ' inputmode="decimal"') + champ("iMan", "Manœuvre / armoire", i.manoeuvre) + "</div>" +
+      champ("iAcces", "Accès au bâtiment (codes, clés, gardien…)", i.acces) + "</div>" +
       '<div class="card"><h2>Intervenant</h2>' + champ("iTech", "Technicien", i.technicien) + "</div>" +
       '<button class="btn danger block" id="btnDel">Supprimer cette étude</button>';
     lier("#iAdr", i, "adresse", () => setTitre(i.adresse || "Nouvelle étude"));
     lier("#iVille", i, "ville"); lier("#iClient", i, "client"); lier("#iNum", i, "numApp");
     lier("#iDate", i, "date"); lier("#iMarque", i, "marque"); lier("#iAnnee", i, "annee");
     lier("#iNiv", i, "niveaux"); lier("#iCharge", i, "charge");
+    lier("#iVit", i, "vitesse"); lier("#iMan", i, "manoeuvre"); lier("#iAcces", i, "acces");
     lier("#iTech", i, "technicien", () => { if (!courante.signature.img) courante.signature.nom = i.technicien; });
-    [["#iType", "type"], ["#iErp", "erp"]].forEach(([sel, cle]) => {
+    [["#iType", "type"], ["#iMach", "machinerie"]].forEach(([sel, cle]) => {
       $(sel).querySelectorAll("button").forEach(b => b.onclick = () => {
         i[cle] = i[cle] === b.dataset.v ? "" : b.dataset.v;
         $(sel).querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === i[cle]));
@@ -227,53 +235,67 @@
   // ---------- Onglet : points de contrôle ----------
   function vueControles() {
     const type = courante.ident.type;
+    const rgb = c => "rgb(" + c.join(",") + ")";
+    const placeholder = (it, v) => {
+      const o = v && optDe(it, v);
+      if (it.o === "risque" && v === "P") return "Mesures de prévention / mode opératoire";
+      if (o && o.alerte) return "Précisez (manque, à demander au propriétaire…)";
+      return "Observation (facultatif)";
+    };
     let h = "";
-    if (!type) h += '<div class="card hint">Indiquez le type d\'appareil (électrique / hydraulique) dans l\'onglet « Appareil » pour masquer les points qui ne le concernent pas.</div>';
-    h += '<div class="tout"><button class="btn" id="toutC">Tout conforme</button><button class="btn" id="toutRaz">Tout effacer</button></div>';
+    if (!type) h += '<div class="card hint">Indiquez le type d\'entraînement (électrique / hydraulique) dans l\'onglet « Appareil » pour masquer les points qui ne le concernent pas.</div>';
+    h += '<div class="tout"><button class="btn" id="toutC">Autres risques : absents</button><button class="btn" id="toutRaz">Tout effacer</button></div>';
     CHECKLIST.forEach(g => {
       const items = g.items.filter(it => !it.t || !type || it.t === type);
       if (!items.length) return;
       h += '<div class="groupe">' + esc(g.nom) + "</div>";
       items.forEach(it => {
         const p = courante.points[it.id] || {};
-        h += '<div class="card point ' + (p.e || "") + '" data-id="' + it.id + '">' +
-          '<div class="ref">' + esc(it.ref) + "</div>" +
+        const sel = p.e && optDe(it, p.e);
+        const opts = optsDe(it);
+        h += '<div class="card point" data-id="' + it.id + '"' + (sel ? ' style="border-left:4px solid ' + rgb(sel.rgb) + '"' : "") + ">" +
+          (it.p ? '<div class="ref">' + esc(PICTOS[it.p]) + "</div>" : "") +
           '<div class="txt">' + esc(it.txt) + "</div>" +
-          '<div class="checks">' + ETATS.map(et =>
-            '<div class="chk ' + et.v + (p.e === et.v ? " on" : "") + '" data-v="' + et.v + '" role="checkbox" aria-checked="' + (p.e === et.v) + '">' +
-            '<span class="box">' + CHECK_SVG + "</span>" + esc(et.nom) + "</div>").join("") + "</div>" +
-          '<textarea placeholder="' + (p.e === "NC" ? "Non-conformité constatée / travaux à prévoir" : "Observation (facultatif)") + '"' +
-          (p.obs || p.e === "NC" ? "" : " hidden") + ">" + esc(p.obs || "") + "</textarea>" +
+          '<div class="checks' + (opts.length > 3 ? " six" : "") + '">' + opts.map(o =>
+            '<div class="chk' + (p.e === o.v ? " on" : "") + '" style="--c:' + rgb(o.rgb) + '" data-v="' + o.v + '" role="checkbox" aria-checked="' + (p.e === o.v) + '">' +
+            '<span class="box">' + CHECK_SVG + "</span>" + esc(o.nom) + "</div>").join("") + "</div>" +
+          (it.m ? '<button class="btn mini" type="button"' + (p.e === "P" ? "" : " hidden") + ">Insérer la mesure type</button>" : "") +
+          '<textarea placeholder="' + placeholder(it, p.e) + '"' + (p.obs || (sel && sel.alerte) ? "" : " hidden") + ">" + esc(p.obs || "") + "</textarea>" +
           "</div>";
       });
     });
-    h += '<div class="card"><h2>Observations générales</h2><textarea id="concl" placeholder="Synthèse, préconisations…">' + esc(courante.conclusion) + "</textarea></div>";
+    h += '<div class="card"><h2>Observations / modes opératoires particuliers</h2><textarea id="concl" placeholder="Consignes particulières, manœuvre de secours, préconisations au propriétaire…">' + esc(courante.conclusion) + "</textarea></div>";
     $("#view").innerHTML = h;
 
+    const index = {};
+    CHECKLIST.forEach(g => g.items.forEach(it => { index[it.id] = it; }));
     $("#view").querySelectorAll(".point").forEach(card => {
-      const id = card.dataset.id, ta = $("textarea", card);
+      const id = card.dataset.id, it = index[id], ta = $("textarea", card), bm = $(".mini", card);
+      const pt = () => courante.points[id] || (courante.points[id] = { e: "", obs: "" });
       card.querySelectorAll(".chk").forEach(c => c.onclick = () => {
-        const p = courante.points[id] || (courante.points[id] = { e: "", obs: "" });
+        const p = pt();
         p.e = p.e === c.dataset.v ? "" : c.dataset.v;
-        card.className = "card point " + p.e;
+        const sel = p.e && optDe(it, p.e);
+        card.style.borderLeft = sel ? "4px solid " + rgb(sel.rgb) : "";
         card.querySelectorAll(".chk").forEach(x => {
           const on = x.dataset.v === p.e; x.classList.toggle("on", on); x.setAttribute("aria-checked", on);
         });
-        ta.placeholder = p.e === "NC" ? "Non-conformité constatée / travaux à prévoir" : "Observation (facultatif)";
-        if (p.e) ta.hidden = false;
-        if (p.e === "NC" && !p.obs) ta.focus();
+        ta.placeholder = placeholder(it, p.e);
+        // Risque présent : la mesure de prévention type est proposée automatiquement
+        if (it.o === "risque" && p.e === "P" && !p.obs && it.m) { p.obs = it.m; ta.value = it.m; }
+        if (bm) bm.hidden = p.e !== "P";
+        if (sel && sel.alerte) ta.hidden = false;
         modifie(); majProgression();
       });
-      ta.addEventListener("input", () => {
-        const p = courante.points[id] || (courante.points[id] = { e: "", obs: "" });
-        p.obs = ta.value; modifie();
-      });
+      if (bm) bm.onclick = () => { const p = pt(); p.obs = (p.obs ? p.obs.trim() + "\n" : "") + it.m; ta.value = p.obs; ta.hidden = false; modifie(); };
+      ta.addEventListener("input", () => { pt().obs = ta.value; modifie(); });
     });
     lier("#concl", courante, "conclusion");
-    $("#toutC").onclick = () => confirmer("Tout cocher « Conforme » ?", "Les points déjà renseignés ne seront pas modifiés.", () => {
+    $("#toutC").onclick = () => confirmer("Risques non renseignés → Absent ?", "Tous les risques pas encore cochés seront marqués « Absent ». Les accès, la manutention et la documentation ne sont pas modifiés.", () => {
       pointsVisibles(courante).forEach(it => {
+        if (it.o !== "risque") return;
         const p = courante.points[it.id] || (courante.points[it.id] = { e: "", obs: "" });
-        if (!p.e) p.e = "C";
+        if (!p.e) p.e = "A";
       });
       modifie(); vueControles(); majProgression();
     });
@@ -350,7 +372,7 @@
     if (!courante) return;
     const s = stats(courante);
     $("#progressFill").style.width = (s.total ? 100 * s.fait / s.total : 0) + "%";
-    $("#progressText").textContent = s.fait + "/" + s.total + " points" + (s.nc ? " · " + s.nc + " non conforme" + (s.nc > 1 ? "s" : "") : "") +
+    $("#progressText").textContent = s.fait + "/" + s.total + " points" + (s.risques ? " · " + s.risques + " risque" + (s.risques > 1 ? "s" : "") : "") +
       (courante.signature.img ? " · signé" : " · non signé");
   }
   function lancerPdf() {
